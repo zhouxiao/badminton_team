@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">满城疯羽</string>
+    <string name="action_settings">设置</string>
+    <string name="image">Thumbnail</string>
+    <string name="menu_save">存档比赛成绩</string>
+    <string name="menu_clear">清除历史数据</string>
+    <string name="menu_load">载入历史数据</string>
+    <string name="title_activity_team">TeamActivity</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_test">成员管理</string>
+    <string name="action_reset">初始化成员数据库</string>
+</resources>
