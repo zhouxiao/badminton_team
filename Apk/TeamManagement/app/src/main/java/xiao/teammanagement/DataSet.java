@@ -6,27 +6,28 @@ import java.util.List;
  * Created by Xiao on 2015/5/11.
  */
 public class DataSet {
-    public static final String[] names = new String[] {
-            "白黠",
-            "波波",
-            "昱伟",
-            "钻石",
-            "辉军",
-            "老龙",
-            "老罗",
-            "老马",
-            "梅梅",
-            "陌陌",
-            "司思",
-            "晓光",
-            "王欣",
-            "周霄",
-            "小草",
-            "谢军",
-            "衍峰",
-            "平凡"
-    };
-    public static final String[] descriptions = new String[] {
+        public static final String[] names = new String[] {
+                "白黠",
+                "波波",
+                "陈昱伟",
+                "钻石",
+                "李辉军",
+                "龙明宣",
+                "罗剑民",
+                "马军龙",
+                "梅小鱼",
+                "陌陌",
+                "司思",
+                "孙晓光",
+                "王欣",
+                "周霄",
+                "小草",
+                "谢军",
+                "尹衍锋",
+                "平凡",
+        };
+
+        public static final String[] descriptions = new String[] {
             "BX-白黠",
             "BB-波波",
             "YW-陈昱伟",
