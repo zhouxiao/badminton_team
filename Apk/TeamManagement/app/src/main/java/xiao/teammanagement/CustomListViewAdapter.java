@@ -2,7 +2,13 @@ package xiao.teammanagement;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,6 +16,8 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.android.volley.toolbox.ImageLoader;
 
 import java.util.List;
 
@@ -49,10 +57,44 @@ public class CustomListViewAdapter extends ArrayAdapter<RowItem> {
         holder.txtDesc.setText(rowItem.getAlias());
         holder.txtName.setText(rowItem.getName().substring(1));
 
-         // holder.imageView.setImageResource(rowItem.getImageId());
-        holder.imageView.setImageDrawable(new BitmapDrawable(rowItem.getBitmap()));
+        switch (rowItem.getResourceLocation()){
+            case DataSet.USING_LOCAL_ARRAY_RESOURCE:
+                holder.imageView.setImageResource(rowItem.getImageId());
+                break;
+            case DataSet.USING_LOCAL_SQLITE_RESOURCE:
+                holder.imageView.setImageDrawable(new BitmapDrawable(rowItem.getBitmap()));
+                break;
+            case DataSet.USING_REMOTE_SERVER_RESOURCE:
+                String urlPhoto = DataSet.SERVER_IMAGE_PATH + rowItem.getPhoto();
+
+                SharedPreferences mySharedPreferences = context.getSharedPreferences("team_photo", Activity.MODE_PRIVATE);
+                String key = String.valueOf(rowItem.getId());
+                if (mySharedPreferences.contains(key)){   // Photo binary available in Shared Preference, get it locally
+                    String encodedPhotoString = mySharedPreferences.getString(key, null);
+                    byte[] photoBinary = Base64.decode(encodedPhotoString, Base64.DEFAULT);
+                    Bitmap bitmap = BitmapFactory.decodeByteArray(photoBinary, 0, photoBinary.length);
+                    holder.imageView.setImageDrawable(new BitmapDrawable(bitmap));
+                    rowItem.setBitmap(bitmap);
+                } else{  // fetch it from remote server
+                    NetworkUtil.displayImage(                           // Using volley to fetch remote image
+                            AppController.getInstance().getRequestQueue(),
+                            holder.imageView,
+                            urlPhoto,
+                            80,
+                            80,
+                            rowItem,
+                            context
+                    );
+                }
+                break;
+            default:
+                break;
+        }
+
         return convertView;
     }
+
+
 }
 
 

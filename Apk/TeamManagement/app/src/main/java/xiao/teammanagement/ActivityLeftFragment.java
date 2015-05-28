@@ -3,10 +3,10 @@ package xiao.teammanagement;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.CursorLoader;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -15,13 +15,16 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -32,6 +35,7 @@ public class ActivityLeftFragment extends Fragment implements AdapterView.OnItem
     ListView listView;
     List<RowItem> rowItems;
 
+
     public ActivityLeftFragment() {
     }
 
@@ -41,7 +45,13 @@ public class ActivityLeftFragment extends Fragment implements AdapterView.OnItem
         Log.v("Xiao**********", "Left onCreateView called");
 
         View v =  inflater.inflate(R.layout.fragment_left, container, false);
-        fillRows();
+
+        if (DataSet.USING_CLOUD_DATA){
+            fillRowsFromSharePreference(); // fill rows from Shared Preference team.xml
+        }else{
+            fillRowsFromLocalDb();  // fill rows from local sqlite database
+        }
+
         listView = (ListView)v.findViewById(R.id.list);
         CustomListViewAdapter adapter = new CustomListViewAdapter(this.getActivity(), R.layout.list_item, rowItems);
         listView.setAdapter(adapter);
@@ -49,6 +59,7 @@ public class ActivityLeftFragment extends Fragment implements AdapterView.OnItem
 
         return v;
     }
+
 
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -91,8 +102,8 @@ public class ActivityLeftFragment extends Fragment implements AdapterView.OnItem
 
     }
 
-
-    private void fillRows() {
+    // get data from local sqlite db
+    private void fillRowsFromLocalDb() {
 
         rowItems = new ArrayList<RowItem>();
 
@@ -108,13 +119,6 @@ public class ActivityLeftFragment extends Fragment implements AdapterView.OnItem
                 null);
 
         Cursor c = cursorLoader.loadInBackground();
-
-       /* Cursor c = a.managedQuery(uri,
-                null, //projection
-                null, //selection string
-                null, //selection args array of strings
-                null); //sort order
-      */
 
         int iname = c.getColumnIndex(TeamProviderMetaData.MemberTableMetaData.MEMBER_NAME);
         int ialias = c.getColumnIndex(TeamProviderMetaData.MemberTableMetaData.MEMBER_ALIAS);
@@ -145,6 +149,58 @@ public class ActivityLeftFragment extends Fragment implements AdapterView.OnItem
         //ideally this should be done in
         //a finally block.
         c.close();
+
+        DataSet.rowItems = rowItems;
+    }
+
+    // get data from shared preference storage
+    private void fillRowsFromSharePreference() {
+
+         rowItems = new ArrayList<RowItem>();
+
+        SharedPreferences mySharedPreferences = getActivity().getSharedPreferences("team", Activity.MODE_PRIVATE);
+        Map<String, ?> results = mySharedPreferences.getAll();
+
+        if (results.size() == 0) {
+            Toast.makeText(getActivity().getApplicationContext(), "本地数据库为空，请先同步服务器数据", Toast.LENGTH_LONG).show();
+
+        } else {
+
+            String record = "";
+            for (Map.Entry<String, ?> entry : results.entrySet()) {
+                String id = entry.getKey();
+                String value = entry.getValue().toString();
+                String[] details = value.split("--");
+                String name = details[0];
+                String alias = details[1];
+                String age = details[2];
+                String sex = details[3];
+                String created_date = details[4];
+                String modified_date = details[5];
+                String photo = details[6];
+
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+                int _id = Integer.parseInt(id);
+                int _age = Integer.parseInt(age);
+                int _sex = Integer.parseInt(sex);
+                Date _created_date = null;
+                Date _modified_date = null;
+                try {
+                    _created_date = sdf.parse(created_date);
+                    _modified_date = sdf.parse(modified_date);
+                } catch (ParseException pe) {
+                    pe.printStackTrace();
+                }
+
+                rowItems.add(new RowItem(_id, name, alias, _age, _sex, _created_date, _modified_date, photo));
+
+                /*
+                Log.d("Team Member:", "id= " + id + " name= " + name + " alias= " + alias + " age= " + age
+                        + " sex= " + sex + " created= " + created_date + " modified= " + modified_date + " photo= " + photo + "\n");
+                */
+            }
+        }
 
         DataSet.rowItems = rowItems;
     }

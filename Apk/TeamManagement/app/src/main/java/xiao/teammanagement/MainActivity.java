@@ -34,12 +34,12 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
     private FragmentManager manager;
     private FragmentTransaction transaction;
     private boolean isDeletable = false;
+    private static int RECORD_FIELD_COUNT = 6;
 
     public static final String LOGTAG = "Main Activity";
     public static String ALERT_DIALOG_TAG = "ALERT_DIALOG_TAG";
     public static String PROMPT_DIALOG_TAG_LOAD = "PROMPT_DIALOG_TAG_LOAD";
     public static String PROMPT_DIALOG_TAG_SAVE = "PROMPT_DIALOG_TAG_SAVE";
-    private static int RECORD_FIELD_COUNT = 6;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,14 +52,8 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
 
     @Override
     protected void onResume() {
-
         Log.v("Main Activity****", "Resume called");
-
-
-
         super.onResume();
-
-
     }
 
     @Override
@@ -257,6 +251,7 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
             String valueResult = entry.getValue().toString();
             String matchDate = keyResult.substring(0, 11);
             String matchResult = valueResult.replaceAll(" vs ", ",");
+
             matchResult = matchResult.replaceAll(" ", ",");
             matchResult = matchResult.replace('+', ',');
             for (int i = 0; i < DataSet.names.length; i++)
@@ -420,6 +415,12 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
         Toast toast = Toast.makeText(getApplicationContext(), toastMsg, Toast.LENGTH_SHORT);
         toast.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0);
         toast.show();
+    }
+
+    @Override
+    protected void onStop() {
+        AppController.getInstance().cancelPendingRequests(AppController.TAG);
+        super.onStop();
     }
 
     @Override

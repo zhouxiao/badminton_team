@@ -1,0 +1,17 @@
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '波波', 'BB', '1', '1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'bobo.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '陈昱伟', 'YW', '2', '1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'cyw.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '钻石', 'ZS', '1', '0', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'diamond.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '李辉军', 'HJ', '1', '1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'li.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '龙明宣', 'MX', '5', '1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'laolong.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '罗剑民', 'JM', '3', '1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'luo.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '马军龙', 'LM', '5', '1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'ma.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '梅小鱼', 'XY', '1', '0', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'mei.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '陌陌', 'MM', '1', '1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'mo.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '司思', 'SS', '1', '0', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'sisi.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '孙晓光', 'XG', '1', '1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'sun.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '王欣', 'WX', '1', '1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'wang.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '周霄', 'ZX', '1', '1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'xiao.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '小草', 'XC', '1', '0', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'xiaocao.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '谢军', 'XJ', '1', '1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'xie.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '尹衍锋', 'YF', '1', '1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'yin.png');
+INSERT INTO `thinkphp`.`think_team` (`id`, `name`, `alias`, `age`, `sex`, `created`, `modified`, `photo`) VALUES (NULL, '平凡', 'PF', '1', '0', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'pinfan.png');       

@@ -2,6 +2,7 @@ package xiao.teammanagement;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -53,8 +54,22 @@ public class CustomTeamListViewAdapter extends ArrayAdapter<RowItem> {
         holder.txtAlias.setText(rowItem.getAlias());
         holder.txtSex.setText(rowItem.getSex() == 0 ? "Female" : "Male");
         holder.txtAge.setText(rowItem.getAge() + "年");
-        // holder.imageView.setImageResource(rowItem.getImageId());
-        holder.imageView.setImageDrawable(new BitmapDrawable(rowItem.getBitmap()));
+
+
+        switch (rowItem.getResourceLocation()){
+            case DataSet.USING_LOCAL_ARRAY_RESOURCE:
+                holder.imageView.setImageResource(rowItem.getImageId());
+                break;
+            case DataSet.USING_LOCAL_SQLITE_RESOURCE:
+            case DataSet.USING_REMOTE_SERVER_RESOURCE:
+                holder.imageView.setImageDrawable(new BitmapDrawable(rowItem.getBitmap()));
+                break;
+
+            default:
+                break;
+        }
+
+
         return convertView;
     }
 }

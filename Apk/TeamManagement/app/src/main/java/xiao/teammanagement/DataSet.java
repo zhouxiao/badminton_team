@@ -6,28 +6,43 @@ import java.util.List;
  * Created by Xiao on 2015/5/11.
  */
 public class DataSet {
-        public static final String[] names = new String[] {
-                "白黠",
-                "波波",
-                "陈昱伟",
-                "钻石",
-                "李辉军",
-                "龙明宣",
-                "罗剑民",
-                "马军龙",
-                "梅小鱼",
-                "陌陌",
-                "司思",
-                "孙晓光",
-                "王欣",
-                "周霄",
-                "小草",
-                "谢军",
-                "尹衍锋",
-                "平凡",
-        };
 
-        public static final String[] descriptions = new String[] {
+    public final static int USING_LOCAL_ARRAY_RESOURCE =   0x001;
+    public final static int USING_LOCAL_SQLITE_RESOURCE =  0x002;
+    public final static int USING_REMOTE_SERVER_RESOURCE = 0x003;
+
+    public static String SERVER = "192.168.1.104";
+    public static String SITE_URL = "http://" + SERVER + "/Xiao/Team/";
+    public static String ACTION_FETCHALL_URL = SITE_URL + "fetchall";
+    public static String ACTION_ADD_URL = SITE_URL + "add";
+    public static String ACTION_DELETE_URL = SITE_URL + "delete";
+    public static String ACTION_UPDATE_URL = SITE_URL + "update";
+    public static String SERVER_IMAGE_PATH = "http://" + SERVER + "/Xiao/Public/img/team/";
+    public static String FIELD_SEPERATOR = "--";
+
+    public static boolean USING_CLOUD_DATA = true; //Control using local sqlite db or remote mysql db
+
+    public static final String[] names = new String[] {
+            "白黠",
+            "波波",
+            "陈昱伟",
+            "钻石",
+            "李辉军",
+            "龙明宣",
+            "罗剑民",
+            "马军龙",
+            "梅小鱼",
+            "陌陌",
+            "司思",
+            "孙晓光",
+            "王欣",
+            "周霄",
+            "小草",
+            "谢军",
+            "尹衍锋",
+            "平凡",
+    };
+    public static final String[] descriptions = new String[] {
             "BX-白黠",
             "BB-波波",
             "YW-陈昱伟",

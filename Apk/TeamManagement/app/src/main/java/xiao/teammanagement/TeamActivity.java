@@ -6,6 +6,7 @@ import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.CursorLoader;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.SQLException;
@@ -16,6 +17,7 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
@@ -32,9 +34,27 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.VolleyLog;
+import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.JsonRequest;
+import com.android.volley.toolbox.StringRequest;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
+import java.lang.reflect.Member;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import xiao.teammanagement.TeamProviderMetaData.MemberTableMetaData;
 
@@ -45,6 +65,9 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
     private int curIdx = -1;
     ListView listView;
     List<RowItem> rowItems;
+
+    private static String TAG = TeamActivity.class.getSimpleName();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,12 +102,106 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
             return true;
         }
 
+        if (id == R.id.action_sync){
+            syncUpWithServer();
+            refreshParentActivity();
+        }
+
         if (id == R.id.action_reset){
-            batchImport();
+            // batchImport();
         }
 
         return super.onOptionsItemSelected(item);
     }
+
+    private void syncUpWithServer() {
+
+        int netConnectResult = NetworkUtil.getConnectivityStatus(getApplicationContext());
+
+        switch (netConnectResult){
+            case 0:
+                Toast.makeText(getApplicationContext(), "没有网络连接，无法同步", Toast.LENGTH_LONG).show();
+                break;
+            case 1:
+                Toast.makeText(getApplicationContext(), "Wifi连接可用， 开始同步", Toast.LENGTH_LONG).show();
+                fetchLatestData();
+                break;
+            case 2:
+                Toast.makeText(getApplicationContext(), "移动数据可用，开始同步", Toast.LENGTH_LONG).show();
+                fetchLatestData();
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void fetchLatestData() {
+
+        JsonArrayRequest req = new JsonArrayRequest(DataSet.ACTION_FETCHALL_URL,
+                new Response.Listener<JSONArray>() {
+                    @Override
+                    public void onResponse(JSONArray response) {
+                        try {
+                            // Parsing json array response
+                            // loop through each json object
+                            String jsonResponse = "";
+
+                            // Save to sharedPreference "team.xml"
+                            SharedPreferences mySharedPreferences = getSharedPreferences("team", Activity.MODE_PRIVATE);
+                            SharedPreferences.Editor editor = mySharedPreferences.edit();
+                            editor.clear(); // clear old data
+
+                            for (int i = 0; i < response.length(); i++) {
+
+                                JSONObject person = (JSONObject) response.get(i);
+
+                                String id = person.getString("id");
+                                String name = person.getString("name");
+                                String alias = person.getString("alias");
+                                String age = person.getString("age");
+                                String sex = person.getString("sex");
+                                String created_date = person.getString("created");
+                                String modified_date = person.getString("modified");
+                                String photo = person.getString("photo");
+
+                                jsonResponse +=  name + DataSet.FIELD_SEPERATOR;
+                                jsonResponse +=  alias + DataSet.FIELD_SEPERATOR;
+                                jsonResponse +=  age + DataSet.FIELD_SEPERATOR;
+                                jsonResponse +=  sex + DataSet.FIELD_SEPERATOR;
+                                jsonResponse +=  created_date + DataSet.FIELD_SEPERATOR;
+                                jsonResponse +=  modified_date + DataSet.FIELD_SEPERATOR;
+                                jsonResponse +=  photo;
+
+                                editor.putString(id, jsonResponse);
+
+                                jsonResponse = "";
+                            }
+
+                            editor.apply();
+                            Log.d(TAG, jsonResponse);
+                            Toast.makeText(getApplicationContext(), "数据同步成功", Toast.LENGTH_LONG).show();
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            Toast.makeText(getApplicationContext(),
+                                    "Error: " + e.getMessage(),
+                                    Toast.LENGTH_LONG).show();
+                        }
+
+                    }
+                }, new Response.ErrorListener() {
+                     @Override
+                          public void onErrorResponse(VolleyError error) {
+                            VolleyLog.d(TAG, "Error: " + error.getMessage());
+                            Toast.makeText(getApplicationContext(), "获取服务器数据失败: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                });
+
+        // Adding request to request queue
+        AppController.getInstance().addToRequestQueue(req);
+    }
+
+
 
     public void handleButton(View target){
         switch(target.getId()){
@@ -175,6 +292,19 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
         String name = DataSet.rowItems.get(i).getName();
         int id = DataSet.rowItems.get(i).getId();
 
+
+        if (DataSet.USING_CLOUD_DATA){
+
+            deleteMemberFromCloud(id, name);
+
+        } else{
+
+            deleteMemberFromLocalDb(id, name);
+        }
+
+    }
+
+    private void deleteMemberFromLocalDb(int id, String name) {
         ContentResolver cr = this.getContentResolver();
         Uri uri = MemberTableMetaData.CONTENT_URI;
         Uri delUri = Uri.withAppendedPath(uri, Integer.toString(id));
@@ -192,14 +322,55 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
         }catch(IllegalArgumentException e){
             e.printStackTrace();
         }
+    }
 
+    private void deleteMemberFromCloud(final int id, String _name) {
+
+        Map<String, String> hMap = new HashMap<String, String>();
+        hMap.put("id", String.valueOf(id));
+        final String  name = _name;
+
+        Request<JSONObject> jsonRequest = new CustomRequest(Request.Method.POST, DataSet.ACTION_DELETE_URL, hMap,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.d(TAG, "response -> " + response.toString());
+                        try {
+                            boolean success = response.getBoolean("success");
+                            if (success){
+                                Toast.makeText(getApplicationContext(),"成功删除成员" + name,Toast.LENGTH_LONG).show();
+
+                                // Delete it from Shared Preference to sync up with Server
+                                SharedPreferences mySharedPreferences = getSharedPreferences("team", Activity.MODE_PRIVATE);
+                                SharedPreferences.Editor editor = mySharedPreferences.edit();
+                                editor.remove(String.valueOf(id));
+                                editor.apply();
+
+                                postSaveMember();
+                                refreshParentActivity();
+                            } else{
+                                Toast.makeText(getApplicationContext(),"服务器端删除失败",Toast.LENGTH_LONG).show();
+                            }
+
+                        } catch(JSONException e){
+                            e.printStackTrace();
+                            Toast.makeText(getApplicationContext(),"Error: " + e.getMessage(),Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e(TAG, error.getMessage(), error);
+            }
+        });
+
+        AppController.getInstance().addToRequestQueue(jsonRequest);
 
     }
 
     private void refreshParentActivity() {
 
         //startActivity(getParentActivityIntent());
-
         finish();
      //   startActivity(getIntent());
 
@@ -262,6 +433,7 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
                 ImageView imageView = (ImageView) findViewById(R.id.testPhoto);
                 /* 将Bitmap设定到ImageView */
                 imageView.setImageBitmap(bitmap);
+
             } catch (FileNotFoundException e) {
                 Log.e("Exception", e.getMessage(),e);
             }
@@ -278,7 +450,7 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
                 if(cancelled){
                     toastMsg = "已撤销添加";
                 } else {
-                    SaveNewMember();
+                    saveNewMember();
                     toastMsg = "已成功添加新成员";
                 }
                 break;
@@ -307,39 +479,133 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
     }
 
     private void updateMember(int i) {
+
         int id = DataSet.rowItems.get(i).getId();
 
         ContentValues cv = validateDbInput();
+        Long now = System.currentTimeMillis();
+        cv.put(MemberTableMetaData.MODIFIED_DATE, now);
 
-        if (cv != null){
-            Long now = System.currentTimeMillis();
-            cv.put(MemberTableMetaData.MODIFIED_DATE, now);
+        if (cv != null) {
 
-            ContentResolver cr = this.getContentResolver();
-            Uri uri = MemberTableMetaData.CONTENT_URI;
-            Uri updateUri = Uri.withAppendedPath(uri, Integer.toString(id));
+            updateMemberFromCloud(id, cv);
 
-            try {
-                cr.update(updateUri, cv, null, null);
+        } else {
 
-                Toast toast = Toast.makeText(getApplicationContext(), "已成功更新记录", Toast.LENGTH_SHORT);
-                toast.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0);
-                toast.show();
-
-                postSaveMember();
-                refreshParentActivity();
-
-            }catch(IllegalArgumentException e){
-                e.printStackTrace();
-            }
+           updateMemberFromLocalDb(id, cv);
         }
 
     }
+
+    private void updateMemberFromLocalDb(int id, ContentValues cv) {
+
+        ContentResolver cr = this.getContentResolver();
+        Uri uri = MemberTableMetaData.CONTENT_URI;
+        Uri updateUri = Uri.withAppendedPath(uri, Integer.toString(id));
+
+        try {
+            cr.update(updateUri, cv, null, null);
+
+            Toast toast = Toast.makeText(getApplicationContext(), "已成功更新记录", Toast.LENGTH_SHORT);
+            toast.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0);
+            toast.show();
+
+            postSaveMember();
+            refreshParentActivity();
+
+        }catch(IllegalArgumentException e){
+            e.printStackTrace();
+        }
+    }
+
+    private void updateMemberFromCloud(final int id, ContentValues cv) {
+
+        final Map<String, String> hMap = new HashMap<String, String>();
+
+        final String name = cv.getAsString(MemberTableMetaData.MEMBER_NAME);
+        final String alias = cv.getAsString(MemberTableMetaData.MEMBER_ALIAS);
+        final String age = cv.getAsString(MemberTableMetaData.MEMBER_AGE);
+        final String sex = cv.getAsString(MemberTableMetaData.MEMBER_SEX);
+        final String modified = cv.getAsString(MemberTableMetaData.MODIFIED_DATE);
+
+        hMap.put("id", String.valueOf(id));
+        hMap.put(MemberTableMetaData.MEMBER_NAME, name);
+        hMap.put(MemberTableMetaData.MEMBER_ALIAS, alias);
+        hMap.put(MemberTableMetaData.MEMBER_AGE, age);
+        hMap.put(MemberTableMetaData.MEMBER_SEX, sex);
+        hMap.put(MemberTableMetaData.MODIFIED_DATE, modified);
+
+        byte[] byte_arr = cv.getAsByteArray(MemberTableMetaData.MEMBER_PHOTO);
+        // Encode Image to String
+        String encodedPhotoString = Base64.encodeToString(byte_arr, 0);
+        hMap.put(MemberTableMetaData.MEMBER_PHOTO, encodedPhotoString);
+
+
+        Request<JSONObject> jsonRequest = new CustomRequest(Request.Method.POST, DataSet.ACTION_UPDATE_URL, hMap,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.d(TAG, "response -> " + response.toString());
+                        try {
+                            boolean success = response.getBoolean("success");
+                            if (success){
+                                Toast.makeText(getApplicationContext(),"成功更新成员" + name,Toast.LENGTH_LONG).show();
+
+                                // Update Shared Preference to Sync up with Server
+                                SharedPreferences mySharedPreferences = getSharedPreferences("team", Activity.MODE_PRIVATE);
+                                String key = String.valueOf(id);
+                                String oldValue = mySharedPreferences.getString(key, null);
+
+                                if (oldValue != null) {
+                                    String details[] = oldValue.split(DataSet.FIELD_SEPERATOR);
+                                    String created = details[4];
+                                    String photo = alias + ".png";
+                                    String value = "";
+
+                                    value +=  name + DataSet.FIELD_SEPERATOR;
+                                    value +=  alias + DataSet.FIELD_SEPERATOR;
+                                    value +=  age + DataSet.FIELD_SEPERATOR;
+                                    value +=  sex + DataSet.FIELD_SEPERATOR;
+                                    value +=  created + DataSet.FIELD_SEPERATOR;
+                                    value +=  modified + DataSet.FIELD_SEPERATOR;
+                                    value +=  photo;
+
+                                    SharedPreferences.Editor editor = mySharedPreferences.edit();
+                                    editor.putString(key, value);
+                                    editor.apply();
+
+                                } else {
+                                    Toast.makeText(getApplicationContext(),"更新本地缓存失败，请同步服务器",Toast.LENGTH_LONG).show();
+                                }
+
+                                postSaveMember();
+                                refreshParentActivity();
+
+                            } else{
+                                Toast.makeText(getApplicationContext(),"服务器端更新失败",Toast.LENGTH_LONG).show();
+                            }
+
+                        } catch(JSONException e){
+                            e.printStackTrace();
+                            Toast.makeText(getApplicationContext(),"Error: " + e.getMessage(),Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e(TAG, error.getMessage(), error);
+            }
+        });
+
+        AppController.getInstance().addToRequestQueue(jsonRequest);
+    }
+
 
     private ContentValues validateDbInput(){
 
         ContentValues cv = null;
         String toastMsg = "";
+
         boolean isValid = true;
         TextView tv = (TextView)findViewById(R.id.testName);
         String name = tv.getText().toString();
@@ -401,33 +667,111 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
             toast.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0);
             toast.show();
         }
-
-
         return cv;
+    }
+
+    private void saveNewMember() {
+        ContentValues cv = validateDbInput();
+
+        if (cv != null ){
+            if (DataSet.USING_CLOUD_DATA){
+                saveToCloud(cv);
+            } else{
+                saveToLocalDb(cv);
+            }
+        }
 
     }
 
-    private void SaveNewMember() {
-        ContentValues cv = validateDbInput();
-        if (cv != null ){
-            String toastMsg;
-            ContentResolver cr = getContentResolver();
-            Uri uri = MemberTableMetaData.CONTENT_URI;
-            try{
-                Uri insertUri = cr.insert(uri, cv);
-
-                toastMsg = "已成功加入新成员";
-                Toast toast = Toast.makeText(getApplicationContext(), toastMsg, Toast.LENGTH_SHORT);
-                toast.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0);
-                toast.show();
-
-                postSaveMember();
-                refreshParentActivity();
-            }catch(SQLException e){
-                e.printStackTrace();
-                toastMsg = "加入出现异常，失败";
-            }
+    // Save to local sqlite database
+    private void saveToLocalDb(ContentValues cv) {
+        String toastMsg;
+        ContentResolver cr = getContentResolver();
+        Uri uri = MemberTableMetaData.CONTENT_URI;
+        try{
+            Uri insertUri = cr.insert(uri, cv);
+            toastMsg = "已成功加入新成员";
+            Toast toast = Toast.makeText(getApplicationContext(), toastMsg, Toast.LENGTH_SHORT);
+            toast.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0);
+            toast.show();
+            postSaveMember();
+            refreshParentActivity();
+        }catch(SQLException e){
+            e.printStackTrace();
+            toastMsg = "加入出现异常，失败";
         }
+    }
+
+    // Save to cloud mysql database
+    private void saveToCloud(final ContentValues cv) {
+
+        final Map<String, String> hMap = new HashMap<String, String>();
+
+        final String name = cv.getAsString(MemberTableMetaData.MEMBER_NAME);
+        final String alias = cv.getAsString(MemberTableMetaData.MEMBER_ALIAS);
+        final String age = cv.getAsString(MemberTableMetaData.MEMBER_AGE);
+        final String sex = cv.getAsString(MemberTableMetaData.MEMBER_SEX);
+
+        hMap.put(MemberTableMetaData.MEMBER_NAME, name);
+        hMap.put(MemberTableMetaData.MEMBER_ALIAS, alias);
+        hMap.put(MemberTableMetaData.MEMBER_AGE, age);
+        hMap.put(MemberTableMetaData.MEMBER_SEX, sex);
+
+        byte[] byte_arr = cv.getAsByteArray(MemberTableMetaData.MEMBER_PHOTO);
+        // Encode Image to String
+        String encodedPhotoString = Base64.encodeToString(byte_arr, 0);
+        hMap.put(MemberTableMetaData.MEMBER_PHOTO, encodedPhotoString);
+
+        Request<JSONObject> jsonRequest = new CustomRequest(Request.Method.POST, DataSet.ACTION_ADD_URL, hMap,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.d(TAG, "response -> " + response.toString());
+                        try {
+                            boolean success = response.getBoolean("success");
+                            if (success){
+                                Toast.makeText(getApplicationContext(),"成功加入新成员",Toast.LENGTH_LONG).show();
+
+                                // Insert to Shared Preference to Sync up with Server
+                                String id = String.valueOf(response.getInt("id"));
+                                String photo = alias + ".png";
+                                String value = "";
+                                Date date = new Date();
+                                SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                                String dateStr = df.format(date);
+
+                                value +=  name + DataSet.FIELD_SEPERATOR;
+                                value +=  alias + DataSet.FIELD_SEPERATOR;
+                                value +=  age + DataSet.FIELD_SEPERATOR;
+                                value +=  sex + DataSet.FIELD_SEPERATOR;
+                                value +=  dateStr + DataSet.FIELD_SEPERATOR;
+                                value +=  dateStr + DataSet.FIELD_SEPERATOR;
+                                value +=  photo;
+
+                                SharedPreferences mySharedPreferences = getSharedPreferences("team", Activity.MODE_PRIVATE);
+                                SharedPreferences.Editor editor = mySharedPreferences.edit();
+                                editor.putString(id, value);
+                                editor.apply();
+
+                                postSaveMember();
+                                refreshParentActivity();
+                            } else{
+                                Toast.makeText(getApplicationContext(),"服务器端加入操作失败",Toast.LENGTH_LONG).show();
+                            }
+
+                        } catch(JSONException e){
+                            e.printStackTrace();
+                            Toast.makeText(getApplicationContext(),"Error: " + e.getMessage(),Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e(TAG, error.getMessage(), error);
+            }
+        });
+
+        AppController.getInstance().addToRequestQueue(jsonRequest);
 
     }
 
@@ -503,9 +847,20 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
             toggleBtn.setChecked(false);
         }
 
-        Bitmap bitmap = DataSet.rowItems.get(position).getBitmap();
         ImageView iv = (ImageView)findViewById(R.id.testPhoto);
-        iv.setImageDrawable(new BitmapDrawable(bitmap));
+        RowItem rowItem = DataSet.rowItems.get(position);
+
+        switch (rowItem.getResourceLocation()){
+            case DataSet.USING_LOCAL_ARRAY_RESOURCE:
+                iv.setImageResource(rowItem.getImageId());
+                break;
+            case DataSet.USING_LOCAL_SQLITE_RESOURCE:
+            case DataSet.USING_REMOTE_SERVER_RESOURCE:
+                iv.setImageDrawable(new BitmapDrawable(rowItem.getBitmap()));
+                break;
+            default:
+                break;
+        }
 
         Button btnUpdate = (Button)findViewById(R.id.teamBtn_update);
         btnUpdate.setEnabled(true);
