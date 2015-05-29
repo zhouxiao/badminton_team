@@ -67,7 +67,7 @@ public class CustomListViewAdapter extends ArrayAdapter<RowItem> {
             case DataSet.USING_REMOTE_SERVER_RESOURCE:
                 String urlPhoto = DataSet.SERVER_IMAGE_PATH + rowItem.getPhoto();
 
-                SharedPreferences mySharedPreferences = context.getSharedPreferences("team_photo", Activity.MODE_PRIVATE);
+                SharedPreferences mySharedPreferences = context.getSharedPreferences(DataSet.PREFERENCE_TEAM_PHOTO_DB, Activity.MODE_PRIVATE);
                 String key = String.valueOf(rowItem.getId());
                 if (mySharedPreferences.contains(key)){   // Photo binary available in Shared Preference, get it locally
                     String encodedPhotoString = mySharedPreferences.getString(key, null);

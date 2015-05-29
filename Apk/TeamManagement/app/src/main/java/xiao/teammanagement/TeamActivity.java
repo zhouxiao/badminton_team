@@ -68,18 +68,14 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
 
     private static String TAG = TeamActivity.class.getSimpleName();
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_team);
 
         listView = (ListView)findViewById(R.id.listMember);
-
-
         CustomTeamListViewAdapter adapter = new CustomTeamListViewAdapter(this, R.layout.team_list_item, DataSet.rowItems);
         listView.setAdapter(adapter);
-
         listView.setOnItemClickListener(this);
     }
 
@@ -102,106 +98,12 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
             return true;
         }
 
-        if (id == R.id.action_sync){
-            syncUpWithServer();
-            refreshParentActivity();
-        }
-
         if (id == R.id.action_reset){
             // batchImport();
         }
 
         return super.onOptionsItemSelected(item);
     }
-
-    private void syncUpWithServer() {
-
-        int netConnectResult = NetworkUtil.getConnectivityStatus(getApplicationContext());
-
-        switch (netConnectResult){
-            case 0:
-                Toast.makeText(getApplicationContext(), "没有网络连接，无法同步", Toast.LENGTH_LONG).show();
-                break;
-            case 1:
-                Toast.makeText(getApplicationContext(), "Wifi连接可用， 开始同步", Toast.LENGTH_LONG).show();
-                fetchLatestData();
-                break;
-            case 2:
-                Toast.makeText(getApplicationContext(), "移动数据可用，开始同步", Toast.LENGTH_LONG).show();
-                fetchLatestData();
-                break;
-            default:
-                break;
-        }
-    }
-
-    private void fetchLatestData() {
-
-        JsonArrayRequest req = new JsonArrayRequest(DataSet.ACTION_FETCHALL_URL,
-                new Response.Listener<JSONArray>() {
-                    @Override
-                    public void onResponse(JSONArray response) {
-                        try {
-                            // Parsing json array response
-                            // loop through each json object
-                            String jsonResponse = "";
-
-                            // Save to sharedPreference "team.xml"
-                            SharedPreferences mySharedPreferences = getSharedPreferences("team", Activity.MODE_PRIVATE);
-                            SharedPreferences.Editor editor = mySharedPreferences.edit();
-                            editor.clear(); // clear old data
-
-                            for (int i = 0; i < response.length(); i++) {
-
-                                JSONObject person = (JSONObject) response.get(i);
-
-                                String id = person.getString("id");
-                                String name = person.getString("name");
-                                String alias = person.getString("alias");
-                                String age = person.getString("age");
-                                String sex = person.getString("sex");
-                                String created_date = person.getString("created");
-                                String modified_date = person.getString("modified");
-                                String photo = person.getString("photo");
-
-                                jsonResponse +=  name + DataSet.FIELD_SEPERATOR;
-                                jsonResponse +=  alias + DataSet.FIELD_SEPERATOR;
-                                jsonResponse +=  age + DataSet.FIELD_SEPERATOR;
-                                jsonResponse +=  sex + DataSet.FIELD_SEPERATOR;
-                                jsonResponse +=  created_date + DataSet.FIELD_SEPERATOR;
-                                jsonResponse +=  modified_date + DataSet.FIELD_SEPERATOR;
-                                jsonResponse +=  photo;
-
-                                editor.putString(id, jsonResponse);
-
-                                jsonResponse = "";
-                            }
-
-                            editor.apply();
-                            Log.d(TAG, jsonResponse);
-                            Toast.makeText(getApplicationContext(), "数据同步成功", Toast.LENGTH_LONG).show();
-
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                            Toast.makeText(getApplicationContext(),
-                                    "Error: " + e.getMessage(),
-                                    Toast.LENGTH_LONG).show();
-                        }
-
-                    }
-                }, new Response.ErrorListener() {
-                     @Override
-                          public void onErrorResponse(VolleyError error) {
-                            VolleyLog.d(TAG, "Error: " + error.getMessage());
-                            Toast.makeText(getApplicationContext(), "获取服务器数据失败: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-                            }
-                });
-
-        // Adding request to request queue
-        AppController.getInstance().addToRequestQueue(req);
-    }
-
-
 
     public void handleButton(View target){
         switch(target.getId()){
@@ -250,6 +152,7 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
         adf.show(aft, MainActivity.ALERT_DIALOG_TAG + "_UPDATE");
     }
 
+    // Batch import member info from memory array to local sqlite database
     private void batchImport() {
         for (int i = 0; i < DataSet.descriptions.length; i++){
             String[] fields = DataSet.descriptions[i].split("-");
@@ -287,6 +190,8 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
 
     }
 
+
+    // Delete member with assigned id
     private void removeMember(int i) {
 
         String name = DataSet.rowItems.get(i).getName();
@@ -304,6 +209,7 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
 
     }
 
+    // Delete member from local sqlite database
     private void deleteMemberFromLocalDb(int id, String name) {
         ContentResolver cr = this.getContentResolver();
         Uri uri = MemberTableMetaData.CONTENT_URI;
@@ -324,6 +230,7 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
         }
     }
 
+    // Delete member from remote mysql database
     private void deleteMemberFromCloud(final int id, String _name) {
 
         Map<String, String> hMap = new HashMap<String, String>();
@@ -341,9 +248,23 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
                                 Toast.makeText(getApplicationContext(),"成功删除成员" + name,Toast.LENGTH_LONG).show();
 
                                 // Delete it from Shared Preference to sync up with Server
-                                SharedPreferences mySharedPreferences = getSharedPreferences("team", Activity.MODE_PRIVATE);
+                                SharedPreferences mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_TEAM_DB, Activity.MODE_PRIVATE);
                                 SharedPreferences.Editor editor = mySharedPreferences.edit();
                                 editor.remove(String.valueOf(id));
+                                editor.apply();
+
+                                // Delete phote binary from Shared Preference to Sync up with Server
+                                mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_TEAM_PHOTO_DB, Activity.MODE_PRIVATE);
+                                editor = mySharedPreferences.edit();
+                                editor.remove(String.valueOf(id));
+                                editor.apply();
+
+                                // Save last_updated timestamp from server to shared preference
+                                String key = "last_updated";
+                                String last_updated = response.getString(key);
+                                mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_SYNC_UP_TIMESTAMP, Activity.MODE_PRIVATE);
+                                editor = mySharedPreferences.edit();
+                                editor.putString(key, last_updated);
                                 editor.apply();
 
                                 postSaveMember();
@@ -478,6 +399,7 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
 
     }
 
+    // Updated member info with assigned id
     private void updateMember(int i) {
 
         int id = DataSet.rowItems.get(i).getId();
@@ -497,6 +419,7 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
 
     }
 
+    // Updated local sqlite database
     private void updateMemberFromLocalDb(int id, ContentValues cv) {
 
         ContentResolver cr = this.getContentResolver();
@@ -518,6 +441,7 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
         }
     }
 
+    // Updated remote mysql database
     private void updateMemberFromCloud(final int id, ContentValues cv) {
 
         final Map<String, String> hMap = new HashMap<String, String>();
@@ -537,9 +461,8 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
 
         byte[] byte_arr = cv.getAsByteArray(MemberTableMetaData.MEMBER_PHOTO);
         // Encode Image to String
-        String encodedPhotoString = Base64.encodeToString(byte_arr, 0);
+        final String encodedPhotoString = Base64.encodeToString(byte_arr, 0);
         hMap.put(MemberTableMetaData.MEMBER_PHOTO, encodedPhotoString);
-
 
         Request<JSONObject> jsonRequest = new CustomRequest(Request.Method.POST, DataSet.ACTION_UPDATE_URL, hMap,
                 new Response.Listener<JSONObject>() {
@@ -552,7 +475,7 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
                                 Toast.makeText(getApplicationContext(),"成功更新成员" + name,Toast.LENGTH_LONG).show();
 
                                 // Update Shared Preference to Sync up with Server
-                                SharedPreferences mySharedPreferences = getSharedPreferences("team", Activity.MODE_PRIVATE);
+                                SharedPreferences mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_TEAM_DB, Activity.MODE_PRIVATE);
                                 String key = String.valueOf(id);
                                 String oldValue = mySharedPreferences.getString(key, null);
 
@@ -570,9 +493,27 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
                                     value +=  modified + DataSet.FIELD_SEPERATOR;
                                     value +=  photo;
 
+                                    // Updated shared preference to sync up with Server
                                     SharedPreferences.Editor editor = mySharedPreferences.edit();
                                     editor.putString(key, value);
                                     editor.apply();
+
+                                    // Updated photo binary to shared preference to sync up with Server
+                                    mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_TEAM_PHOTO_DB, Activity.MODE_PRIVATE);
+                                    editor = mySharedPreferences.edit();
+                                    editor.putString(key, encodedPhotoString);
+                                    editor.apply();
+
+                                    // Save last_updated timestamp from server to shared preference
+                                    key = "last_updated";
+                                    String last_updated = response.getString(key);
+                                    mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_SYNC_UP_TIMESTAMP, Activity.MODE_PRIVATE);
+                                    editor = mySharedPreferences.edit();
+                                    editor.putString(key, last_updated);
+                                    editor.apply();
+
+                                    postSaveMember();
+                                    refreshParentActivity();
 
                                 } else {
                                     Toast.makeText(getApplicationContext(),"更新本地缓存失败，请同步服务器",Toast.LENGTH_LONG).show();
@@ -600,7 +541,7 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
         AppController.getInstance().addToRequestQueue(jsonRequest);
     }
 
-
+    // Valid input
     private ContentValues validateDbInput(){
 
         ContentValues cv = null;
@@ -670,6 +611,7 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
         return cv;
     }
 
+    // Save member entry
     private void saveNewMember() {
         ContentValues cv = validateDbInput();
 
@@ -719,7 +661,7 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
 
         byte[] byte_arr = cv.getAsByteArray(MemberTableMetaData.MEMBER_PHOTO);
         // Encode Image to String
-        String encodedPhotoString = Base64.encodeToString(byte_arr, 0);
+        final String encodedPhotoString = Base64.encodeToString(byte_arr, 0);
         hMap.put(MemberTableMetaData.MEMBER_PHOTO, encodedPhotoString);
 
         Request<JSONObject> jsonRequest = new CustomRequest(Request.Method.POST, DataSet.ACTION_ADD_URL, hMap,
@@ -748,9 +690,23 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
                                 value +=  dateStr + DataSet.FIELD_SEPERATOR;
                                 value +=  photo;
 
-                                SharedPreferences mySharedPreferences = getSharedPreferences("team", Activity.MODE_PRIVATE);
+                                SharedPreferences mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_TEAM_DB, Activity.MODE_PRIVATE);
                                 SharedPreferences.Editor editor = mySharedPreferences.edit();
                                 editor.putString(id, value);
+                                editor.apply();
+
+                                // Saved photo binary to shared preference to sync up with Server
+                                mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_TEAM_PHOTO_DB, Activity.MODE_PRIVATE);
+                                editor = mySharedPreferences.edit();
+                                editor.putString(id, encodedPhotoString);
+                                editor.apply();
+
+                                // Save last_updated timestamp from server to shared preference
+                                String key = "last_updated";
+                                String last_updated = response.getString(key);
+                                mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_SYNC_UP_TIMESTAMP, Activity.MODE_PRIVATE);
+                                editor = mySharedPreferences.edit();
+                                editor.putString(key, last_updated);
                                 editor.apply();
 
                                 postSaveMember();

@@ -14,6 +14,7 @@ public class DataSet {
     public static String SERVER = "192.168.1.104";
     public static String SITE_URL = "http://" + SERVER + "/Xiao/Team/";
     public static String ACTION_FETCHALL_URL = SITE_URL + "fetchall";
+    public static String ACTION_GET_LATEST_TIMESTAMP_URL = SITE_URL + "getLastUpdatedTimeStamp";
     public static String ACTION_ADD_URL = SITE_URL + "add";
     public static String ACTION_DELETE_URL = SITE_URL + "delete";
     public static String ACTION_UPDATE_URL = SITE_URL + "update";
@@ -21,6 +22,12 @@ public class DataSet {
     public static String FIELD_SEPERATOR = "--";
 
     public static boolean USING_CLOUD_DATA = true; //Control using local sqlite db or remote mysql db
+
+    public static String PREFERENCE_SCORE_DB = "score"; // shared preference db name for match result
+    public static String PREFERENCE_TEAM_DB = "team";  // shared preference db name for member info
+    public static String PREFERENCE_TEAM_PHOTO_DB = "team_photo"; // shared preference for member photo binary
+    public static String PREFERENCE_SYNC_UP_TIMESTAMP = "syncup"; // shared preference to store sync up timestamp
+
 
     public static final String[] names = new String[] {
             "白黠",

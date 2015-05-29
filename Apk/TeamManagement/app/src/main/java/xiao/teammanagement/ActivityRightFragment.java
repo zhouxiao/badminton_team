@@ -40,7 +40,7 @@ public class ActivityRightFragment extends Fragment {
             textPlayerView.setText(name);
         }
 
-        SharedPreferences mySharedPreferences = getActivity().getSharedPreferences("score", Activity.MODE_PRIVATE);
+        SharedPreferences mySharedPreferences = getActivity().getSharedPreferences(DataSet.PREFERENCE_SCORE_DB, Activity.MODE_PRIVATE);
         Map<String, ?> results = mySharedPreferences.getAll();
 
         String record = "";

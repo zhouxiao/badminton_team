@@ -73,7 +73,7 @@ public class NetworkUtil {
                     rowItem.setBitmap(bitmap);
 
                     // Save photo binary to shared preference to reduce network access
-                    SharedPreferences mySharedPreferences = context.getSharedPreferences("team_photo", Activity.MODE_PRIVATE);
+                    SharedPreferences mySharedPreferences = context.getSharedPreferences(DataSet.PREFERENCE_TEAM_PHOTO_DB, Activity.MODE_PRIVATE);
                     String key = String.valueOf(rowItem.getId());
 
                     ByteArrayOutputStream os = new ByteArrayOutputStream();

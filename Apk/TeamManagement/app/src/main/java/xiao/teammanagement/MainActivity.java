@@ -18,6 +18,16 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.VolleyLog;
+import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.StringRequest;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -40,6 +50,10 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
     public static String ALERT_DIALOG_TAG = "ALERT_DIALOG_TAG";
     public static String PROMPT_DIALOG_TAG_LOAD = "PROMPT_DIALOG_TAG_LOAD";
     public static String PROMPT_DIALOG_TAG_SAVE = "PROMPT_DIALOG_TAG_SAVE";
+
+    private static String TAG = MainActivity.class.getSimpleName();
+
+    private boolean syncupcall = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,9 +83,55 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
         transaction.add(R.id.right, fragmentRight, "detail");
         transaction.commit();
 
+        int netConnectResult = NetworkUtil.getConnectivityStatus(getApplicationContext());
+        if (netConnectResult != NetworkUtil.TYPE_NOT_CONNECTED){
+            checkAvailableSyncup();
+        }
+
         Log.v("Main Activity****", "Start called");
 
         super.onStart();
+    }
+
+    private void checkAvailableSyncup() {
+
+        // Save last_updated timestamp from server to shared preference
+        final String key = "last_updated";
+        final SharedPreferences  mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_SYNC_UP_TIMESTAMP, Activity.MODE_PRIVATE);
+        final String last_updated = mySharedPreferences.getString(key, "");
+        StringRequest stringRequest = new StringRequest(DataSet.ACTION_GET_LATEST_TIMESTAMP_URL,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        if (last_updated.compareTo(response) == 0){
+                            Log.d(TAG, "no change");
+                            if (syncupcall){
+                                Toast.makeText(getApplicationContext(), "已是最新数据", Toast.LENGTH_LONG).show();
+                                syncupcall = false;
+                            }
+
+                        } else {
+                            Toast.makeText(getApplicationContext(), "服务器数据有更新，开始同步数据", Toast.LENGTH_LONG).show();
+
+                            // get latest data
+                            fetchLatestData();
+
+                            // update lastest update timestamp
+                            SharedPreferences.Editor editor = mySharedPreferences.edit();
+                            editor.putString(key, response);
+                            editor.apply();
+                        }
+                        Log.d(TAG, response);
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e(TAG, error.getMessage(), error);
+            }
+        });
+
+        AppController.getInstance().addToRequestQueue(stringRequest);
+
     }
 
     @Override
@@ -102,14 +162,144 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
             case R.id.menu_save:
                 handleSave();
                 break;
+            case R.id.menu_save_to_cloud:
+                uploadResultToCloud();
+                break;
             case R.id.menu_team:
                 startTeamActivity();
+                break;
+            case R.id.menu_sync:
+                syncupcall = true;
+                if (syncUpWithServer() != NetworkUtil.TYPE_NOT_CONNECTED) checkAvailableSyncup();
                 break;
             default:
                 break;
         }
         return super.onOptionsItemSelected(item);
     }
+
+    // Uploaded match result to Cloud db from local shared preference
+    private void uploadResultToCloud() {
+
+        int netConnectResult = NetworkUtil.getConnectivityStatus(getApplicationContext());
+        if (netConnectResult == NetworkUtil.TYPE_NOT_CONNECTED){
+            Toast.makeText(getApplicationContext(), "没有网络连接，无法上传", Toast.LENGTH_LONG).show();
+        } else {
+
+            SharedPreferences mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_SCORE_DB, Activity.MODE_PRIVATE);
+            Map<String, ?> results = mySharedPreferences.getAll();
+
+             for (Map.Entry<String, ?> entry:results.entrySet()){
+                String keyResult = entry.getKey();
+                String valueResult = entry.getValue().toString();
+                String matchDate = keyResult.substring(0, 11);
+                String matchResult = valueResult.replaceAll(" vs ", ",");
+
+                matchResult = matchResult.replaceAll("\\s+", ",");
+                matchResult = matchResult.replace('+', ',');
+                for (int i = 0; i < DataSet.names.length; i++)
+                    matchResult = matchResult.replaceAll(DataSet.names[i], DataSet.descriptions[i]);
+
+            }
+
+
+        }
+
+    }
+
+    private int syncUpWithServer() {
+
+        int netConnectResult = NetworkUtil.getConnectivityStatus(getApplicationContext());
+
+        switch (netConnectResult){
+            case 0:
+                Toast.makeText(getApplicationContext(), "没有网络连接，无法同步", Toast.LENGTH_LONG).show();
+                break;
+            case 1:
+                Toast.makeText(getApplicationContext(), "Wifi连接可用，检查是否有更新", Toast.LENGTH_LONG).show();
+                break;
+            case 2:
+                Toast.makeText(getApplicationContext(), "移动数据可用，检查是否有更新", Toast.LENGTH_LONG).show();
+                break;
+            default:
+                break;
+        }
+
+        return netConnectResult;
+    }
+
+    private void fetchLatestData() {
+
+        JsonArrayRequest req = new JsonArrayRequest(DataSet.ACTION_FETCHALL_URL,
+                new Response.Listener<JSONArray>() {
+                    @Override
+                    public void onResponse(JSONArray response) {
+                        try {
+                            // Parsing json array response
+                            // loop through each json object
+                            String jsonResponse = "";
+
+                            // clear old info data
+                            SharedPreferences mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_TEAM_DB, Activity.MODE_PRIVATE);
+                            SharedPreferences.Editor editor = mySharedPreferences.edit();
+                            editor.clear();
+
+                            // Save to sharedPreference "team.xml"
+                            for (int i = 0; i < response.length(); i++) {
+
+                                JSONObject person = (JSONObject) response.get(i);
+
+                                String id = person.getString("id");
+                                String name = person.getString("name");
+                                String alias = person.getString("alias");
+                                String age = person.getString("age");
+                                String sex = person.getString("sex");
+                                String created_date = person.getString("created");
+                                String modified_date = person.getString("modified");
+                                String photo = person.getString("photo");
+
+                                jsonResponse +=  name + DataSet.FIELD_SEPERATOR;
+                                jsonResponse +=  alias + DataSet.FIELD_SEPERATOR;
+                                jsonResponse +=  age + DataSet.FIELD_SEPERATOR;
+                                jsonResponse +=  sex + DataSet.FIELD_SEPERATOR;
+                                jsonResponse +=  created_date + DataSet.FIELD_SEPERATOR;
+                                jsonResponse +=  modified_date + DataSet.FIELD_SEPERATOR;
+                                jsonResponse +=  photo;
+
+                                editor.putString(id, jsonResponse);
+                                // Log.d(TAG, jsonResponse);
+                                jsonResponse = "";
+                            }
+
+                            editor.apply();
+                            // clear old photo data
+                            SharedPreferences sp = getSharedPreferences(DataSet.PREFERENCE_TEAM_PHOTO_DB, Activity.MODE_PRIVATE);
+                            SharedPreferences.Editor sp_editor = sp.edit();
+                            sp_editor.clear();
+                            sp_editor.apply();
+
+                            Toast.makeText(getApplicationContext(), "数据同步成功", Toast.LENGTH_LONG).show();
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            Toast.makeText(getApplicationContext(),
+                                    "Error: " + e.getMessage(),
+                                    Toast.LENGTH_LONG).show();
+                        }
+
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                VolleyLog.d(TAG, "Error: " + error.getMessage());
+                Toast.makeText(getApplicationContext(), "获取服务器数据失败: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Adding request to request queue
+        AppController.getInstance().addToRequestQueue(req);
+    }
+
 
     private void startTeamActivity() {
         Intent intent = new Intent(this, TeamActivity.class);
@@ -231,7 +421,7 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
     private void clearHistoryData() {
 
         // 清空sharedPreference
-        SharedPreferences sharedPref = getSharedPreferences("score", Activity.MODE_PRIVATE);
+        SharedPreferences sharedPref = getSharedPreferences(DataSet.PREFERENCE_SCORE_DB, Activity.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.clear();
         editor.apply();
@@ -242,7 +432,7 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
      }
 
     private String getMatchResult() {
-        SharedPreferences mySharedPreferences = getSharedPreferences("score", Activity.MODE_PRIVATE);
+        SharedPreferences mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_SCORE_DB, Activity.MODE_PRIVATE);
         Map<String, ?> results = mySharedPreferences.getAll();
 
         String record = "";
@@ -297,7 +487,7 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
         String match = "";
 
         Date date = new Date();
-        SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String timeKey = df.format(date);
 
         boolean isValid = true;
@@ -337,7 +527,7 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
 
              if (isValid){
                    // Save to sharedPreference "score.xml"
-               SharedPreferences mySharedPreferences = getSharedPreferences("score", Activity.MODE_PRIVATE);
+               SharedPreferences mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_SCORE_DB, Activity.MODE_PRIVATE);
                SharedPreferences.Editor editor = mySharedPreferences.edit();
                editor.putString(timeKey, match + " " + score);
                editor.apply();

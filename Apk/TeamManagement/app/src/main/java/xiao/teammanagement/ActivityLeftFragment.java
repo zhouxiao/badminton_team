@@ -158,7 +158,7 @@ public class ActivityLeftFragment extends Fragment implements AdapterView.OnItem
 
          rowItems = new ArrayList<RowItem>();
 
-        SharedPreferences mySharedPreferences = getActivity().getSharedPreferences("team", Activity.MODE_PRIVATE);
+        SharedPreferences mySharedPreferences = getActivity().getSharedPreferences(DataSet.PREFERENCE_TEAM_DB, Activity.MODE_PRIVATE);
         Map<String, ?> results = mySharedPreferences.getAll();
 
         if (results.size() == 0) {
