@@ -55,7 +55,13 @@ public class CustomListViewAdapter extends ArrayAdapter<RowItem> {
             holder = (ViewHolder)convertView.getTag();
 
         holder.txtDesc.setText(rowItem.getAlias());
-        holder.txtName.setText(rowItem.getName().substring(1));
+        String name = rowItem.getName();
+
+        if(name.length() > 2){
+            holder.txtName.setText(name.substring(1));
+        } else {
+            holder.txtName.setText(name);
+        }
 
         switch (rowItem.getResourceLocation()){
             case DataSet.USING_LOCAL_ARRAY_RESOURCE:

@@ -3,11 +3,12 @@
     <string name="action_settings">设置</string>
     <string name="image">Thumbnail</string>
     <string name="menu_save">存档比赛成绩</string>
-    <string name="menu_clear">清除历史数据</string>
-    <string name="menu_load">载入历史数据</string>
+    <string name="menu_clear">清除存档数据</string>
+    <string name="menu_save_to_cloud">上传比赛成绩</string>
+    <string name="menu_load">下载历史数据</string>
     <string name="title_activity_team">TeamActivity</string>
-    <string name="action_test">成员管理</string>
+    <string name="action_team">成员管理</string>
     <string name="action_reset">初始化成员数据库</string>
     <string name="action_sync">同步服务器数据</string>
-    <string name="menu_save_to_cloud">上传云端数据库</string>
+
 </resources>

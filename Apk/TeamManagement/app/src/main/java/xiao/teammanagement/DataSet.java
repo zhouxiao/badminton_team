@@ -13,13 +13,18 @@ public class DataSet {
 
     public static String SERVER = "192.168.1.104";
     public static String SITE_URL = "http://" + SERVER + "/Xiao/Team/";
+
     public static String ACTION_FETCHALL_URL = SITE_URL + "fetchall";
     public static String ACTION_GET_LATEST_TIMESTAMP_URL = SITE_URL + "getLastUpdatedTimeStamp";
+    public static String ACTION_UPLOAD_MATCH_RESULT = SITE_URL + "upLoadMatchResult";
     public static String ACTION_ADD_URL = SITE_URL + "add";
     public static String ACTION_DELETE_URL = SITE_URL + "delete";
     public static String ACTION_UPDATE_URL = SITE_URL + "update";
+    public static String ACTION_DOWNLOAD_DATA_URL = SITE_URL + "downloadData";
+
     public static String SERVER_IMAGE_PATH = "http://" + SERVER + "/Xiao/Public/img/team/";
-    public static String FIELD_SEPERATOR = "--";
+    public static String FIELD_SEPERATOR_DASH = "--";
+    public static String FIELD_SEPERATOR_COMMA = ",";
 
     public static boolean USING_CLOUD_DATA = true; //Control using local sqlite db or remote mysql db
 
@@ -92,5 +97,6 @@ public class DataSet {
     };
 
     public static List<RowItem> rowItems;
+
 
 }

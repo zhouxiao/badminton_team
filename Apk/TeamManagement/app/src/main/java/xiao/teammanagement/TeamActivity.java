@@ -98,8 +98,11 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
             return true;
         }
 
+        // Available when use local sqlite db
         if (id == R.id.action_reset){
-            // batchImport();
+            if (! DataSet.USING_CLOUD_DATA) {
+                batchImport();
+            }
         }
 
         return super.onOptionsItemSelected(item);
@@ -480,17 +483,17 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
                                 String oldValue = mySharedPreferences.getString(key, null);
 
                                 if (oldValue != null) {
-                                    String details[] = oldValue.split(DataSet.FIELD_SEPERATOR);
+                                    String details[] = oldValue.split(DataSet.FIELD_SEPERATOR_DASH);
                                     String created = details[4];
                                     String photo = alias + ".png";
                                     String value = "";
 
-                                    value +=  name + DataSet.FIELD_SEPERATOR;
-                                    value +=  alias + DataSet.FIELD_SEPERATOR;
-                                    value +=  age + DataSet.FIELD_SEPERATOR;
-                                    value +=  sex + DataSet.FIELD_SEPERATOR;
-                                    value +=  created + DataSet.FIELD_SEPERATOR;
-                                    value +=  modified + DataSet.FIELD_SEPERATOR;
+                                    value +=  name + DataSet.FIELD_SEPERATOR_DASH;
+                                    value +=  alias + DataSet.FIELD_SEPERATOR_DASH;
+                                    value +=  age + DataSet.FIELD_SEPERATOR_DASH;
+                                    value +=  sex + DataSet.FIELD_SEPERATOR_DASH;
+                                    value +=  created + DataSet.FIELD_SEPERATOR_DASH;
+                                    value +=  modified + DataSet.FIELD_SEPERATOR_DASH;
                                     value +=  photo;
 
                                     // Updated shared preference to sync up with Server
@@ -682,12 +685,12 @@ public class TeamActivity extends ActionBarActivity implements OnDialogDoneListe
                                 SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                                 String dateStr = df.format(date);
 
-                                value +=  name + DataSet.FIELD_SEPERATOR;
-                                value +=  alias + DataSet.FIELD_SEPERATOR;
-                                value +=  age + DataSet.FIELD_SEPERATOR;
-                                value +=  sex + DataSet.FIELD_SEPERATOR;
-                                value +=  dateStr + DataSet.FIELD_SEPERATOR;
-                                value +=  dateStr + DataSet.FIELD_SEPERATOR;
+                                value +=  name + DataSet.FIELD_SEPERATOR_DASH;
+                                value +=  alias + DataSet.FIELD_SEPERATOR_DASH;
+                                value +=  age + DataSet.FIELD_SEPERATOR_DASH;
+                                value +=  sex + DataSet.FIELD_SEPERATOR_DASH;
+                                value +=  dateStr + DataSet.FIELD_SEPERATOR_DASH;
+                                value +=  dateStr + DataSet.FIELD_SEPERATOR_DASH;
                                 value +=  photo;
 
                                 SharedPreferences mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_TEAM_DB, Activity.MODE_PRIVATE);

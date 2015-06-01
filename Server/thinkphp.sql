@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: 127.0.0.1
--- Generation Time: 2015-05-29 13:52:19
+-- Generation Time: 2015-06-01 08:32:21
 -- 服务器版本： 5.6.17
 -- PHP Version: 5.5.12
 
@@ -44,19 +44,46 @@ INSERT INTO `think_change` (`id`, `last_updated`, `toggle`) VALUES
 -- --------------------------------------------------------
 
 --
--- 表的结构 `think_score`
+-- 表的结构 `think_match`
 --
 
-CREATE TABLE IF NOT EXISTS `think_score` (
+CREATE TABLE IF NOT EXISTS `think_match` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `player1` varchar(20) NOT NULL,
-  `player2` varchar(20) NOT NULL,
-  `player3` varchar(20) NOT NULL,
-  `player4` varchar(20) NOT NULL,
+  `player1` int(10) unsigned NOT NULL,
+  `player2` int(10) unsigned NOT NULL,
+  `player3` int(10) unsigned NOT NULL,
+  `player4` int(10) unsigned NOT NULL,
   `score` int(11) NOT NULL,
   `matchtime` varchar(19) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=43 ;
+
+--
+-- 转存表中的数据 `think_match`
+--
+
+INSERT INTO `think_match` (`id`, `player1`, `player2`, `player3`, `player4`, `score`, `matchtime`) VALUES
+(22, 17, 18, 11, 12, 5, '2015-05-21 19:29:49'),
+(23, 20, 21, 7, 10, -2, '2015-05-31 19:30:06'),
+(24, 19, 22, 18, 15, 3, '2015-05-31 19:29:22'),
+(25, 14, 16, 20, 9, -4, '2015-05-31 19:29:39'),
+(26, 19, 17, 18, 15, 10, '2015-02-11 19:30:58'),
+(27, 22, 15, 12, 21, -8, '2015-05-31 19:31:36'),
+(28, 10, 7, 11, 12, 15, '2015-04-21 19:31:09'),
+(29, 8, 9, 20, 10, 5, '2015-05-31 19:31:20'),
+(30, 23, 16, 20, 14, -5, '2015-05-31 19:31:51'),
+(31, 11, 12, 21, 10, -10, '2015-05-31 19:32:30'),
+(32, 7, 9, 8, 20, -5, '2015-05-31 19:32:22'),
+(33, 16, 19, 20, 10, 2, '2015-01-22 19:32:49'),
+(34, 22, 19, 15, 18, 14, '2015-05-31 19:32:39'),
+(35, 23, 18, 15, 16, 6, '2015-06-01 12:03:17'),
+(36, 10, 20, 21, 12, -2, '2015-06-01 12:03:25'),
+(37, 8, 9, 7, 10, 5, '2015-06-01 12:03:32'),
+(38, 9, 11, 19, 8, -15, '2015-06-01 13:46:35'),
+(39, 12, 7, 18, 20, 3, '2015-06-01 13:46:51'),
+(40, 17, 22, 7, 18, 15, '2015-06-01 14:14:18'),
+(41, 11, 14, 21, 8, -5, '2015-06-01 14:13:59'),
+(42, 11, 14, 21, 19, 3, '2015-06-01 14:29:03');
 
 -- --------------------------------------------------------
 
@@ -74,7 +101,7 @@ CREATE TABLE IF NOT EXISTS `think_team` (
   `modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `photo` varchar(20) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=32 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=24 ;
 
 --
 -- 转存表中的数据 `think_team`

@@ -90,7 +90,7 @@ public class ActivityLeftFragment extends Fragment implements AdapterView.OnItem
             TextView txtPlayer = (TextView) frmRightView.findViewById(playerId);
             txtPlayer.setText(name);
             PlayerSlot.setSlot(slot);
-            PlayerSlot.savePlayer(playerId, name);
+            PlayerSlot.savePlayer(playerId, position);
             toastMsg = "Player " + (slot + 1) + ": " + rowItems.get(position).getName() + " is added";
         } else {
             toastMsg = "No more player needed";

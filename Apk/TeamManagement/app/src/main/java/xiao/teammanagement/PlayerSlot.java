@@ -8,7 +8,9 @@ import android.util.SparseArray;
  */
 public class PlayerSlot {
     private static int[] slots = {0, 0, 0, 0};
-    private static SparseArray<String> players = new SparseArray<String>();
+    private static SparseArray<Integer> players = new SparseArray<Integer>();
+    private static String historyData;
+    private static boolean showHistoryData;
 
     public static int getNextSlot(){
         int i = 0;
@@ -29,11 +31,11 @@ public class PlayerSlot {
         for (int i = 0; i < slots.length; i++) slots[i] = 0;
     }
 
-    public static void savePlayer(int key, String name){
-       players.put(key, name);
+    public static void savePlayer(int key, int position){
+       players.put(key, position);
     }
 
-    public static SparseArray<String> getSavedPlayer(){
+    public static SparseArray<Integer> getSavedPlayer(){
         return players;
     }
 
@@ -42,4 +44,20 @@ public class PlayerSlot {
     }
 
     public static void clearPlayer() { players.clear(); };
+
+    public static String getHistoryData() {
+        return historyData;
+    }
+
+    public static void setHistoryData(String historyData) {
+        PlayerSlot.historyData = historyData;
+    }
+
+    public static boolean isShowHistoryData() {
+        return showHistoryData;
+    }
+
+    public static void setShowHistoryData(boolean showHistoryData) {
+        PlayerSlot.showHistoryData = showHistoryData;
+    }
 }

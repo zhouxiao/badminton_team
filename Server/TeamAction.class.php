@@ -14,21 +14,16 @@ class TeamAction extends Action {
 	  $this->display();
     }
 	
+	 // get all team member
    public function fetchall(){
-			
 			$User = D('Team');
-	  	$map['id'] = array('between', array('0', '8'));
-
-		 // $data = $User->where($map)->select();
 			$data = $User->select();
-		
-			//echo json_encode($data);
 		
 			$this->ajaxReturn($data, "JSON");
 	 }
-	 
+		
+	// add new team member	 
 	 public function add(){
-	
 		$User = D('Team');
 		$user['name'] = $this->_post('name');
 		$user['alias'] = $this->_post('alias');
@@ -36,14 +31,14 @@ class TeamAction extends Action {
 		$user['sex'] = intval($this->_post('sex'));
 		$user['photo'] = $this->_post('photo');
 		
-    // Decode Image
-    $binary=base64_decode($user['photo']);
-    $user['photo'] = $user['alias'].".png";
+    		// Decode Image
+    		$binary=base64_decode($user['photo']);
+   		$user['photo'] = $user['alias'].".png";
 		
-    $file = fopen("Public\\img\\team\\".$user['photo'], 'wb');
-    // Create File
-    fwrite($file, $binary);
-    fclose($file);
+    		$file = fopen("Public\\img\\team\\".$user['photo'], 'wb');
+    		// Create File
+    		fwrite($file, $binary);
+    		fclose($file);
 		
 		$result = $User->add($user);
 		if ($result){
@@ -69,8 +64,7 @@ class TeamAction extends Action {
 		}
 	}
 	
-	
-	
+	// delete team member 	
 	public function delete(){
 
 		$User = D('Team');
@@ -78,7 +72,6 @@ class TeamAction extends Action {
 		$result = $User->where($map)->delete();	
 		
 		if ($result){
-				
 			$Record = M('Change');
 		  $data = $Record->where('id=1')->find();
 		  $toggle = $data['toggle'];
@@ -100,8 +93,8 @@ class TeamAction extends Action {
 		}		
 	}
 	
+	// update team member
 	public function update(){
-	
 		$User = D('Team');
 		$map['id'] = intval($this->_post('id'));
 		$user['name'] = $this->_post('name');
@@ -144,6 +137,7 @@ class TeamAction extends Action {
 		}		
 	}
 	
+	// get latest update timestamp of table team
 	public function getLastUpdatedTimeStamp(){
 			$Record = M('Change');
 		  $data = $Record->where('id=1')->find();
@@ -151,4 +145,81 @@ class TeamAction extends Action {
 			
 			echo $last_updated;
 	}	
+	
+	// Save match result 
+	public function upLoadMatchResult(){
+	
+			
+		$Match = D('Match');
+		$total = intval($this->_post('total'));
+		for ($i = 1; $i <= $total; $i++){
+			$record = $this->_post((string)$i);
+			$record = explode(",", $record);
+													
+			$records[] = array('matchtime'=>$record[0], 
+												'player1'=>intval($record[1]), 
+												'player2'=>intval($record[2]), 
+												'player3'=>intval($record[3]), 
+												'player4'=>intval($record[4]), 
+												'score'=>intval($record[5]));
+		}
+   
+		$result = $Match->addAll($records);
+		if ($result) {
+				echo json_encode(array('success'=>true, 'result'=>$result));		
+		} else {
+				echo json_encode(array('msg'=>'Some errors occured.'));
+		}
+		
+		//$this->ajaxReturn($records, 'JSON');	
+	}
+
+	// get match result 	
+	public function downloadData(){
+		/*
+		$User = M('Team');
+		$users = $User->getField('id, alias, name');
+		*/
+		
+		$Match = M('Match'); 
+		$condition = intval($this->_post('condition'));
+		
+		switch ($condition){
+			case 1:
+			 
+				$condition = date('Y-m-d') . ' 00:00:00';
+				break;
+			case 2:
+				$d = strtotime('-1 weeks');
+				$condition = date('Y-m-d H:i:s', $d);
+				break;
+			case 3:
+				$d = strtotime('-3 months');
+				$condition = date('Y-m-d H:i:s', $d);
+				break;
+			case 4:
+				$d = strtotime('-1 years');
+				$condition = date('Y-m-d H:i:s', $d);
+				break;
+		}
+		
+		$map['matchtime'] = array('EGT', $condition); 
+		$records = $Match->where($map)->select();
+		
+		
+		$total = count($records);
+		$array['total'] = $total;
+	
+		for($i = 1; $i <= $total; $i++){
+			$record = $records[$i-1];
+			$array['record'.$i] = $record['player1'] . ',' . $record['player2'] . ',' 
+														. $record['player3'] . ',' . $record['player4'] . ',' 
+														. $record['score'] . ',' . $record['matchtime'];
+		}
+			
+			echo json_encode($array);		
+		
+	}
+		
+
 }

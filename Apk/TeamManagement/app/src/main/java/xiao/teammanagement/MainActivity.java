@@ -18,6 +18,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.VolleyLog;
@@ -35,6 +36,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -50,6 +52,7 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
     public static String ALERT_DIALOG_TAG = "ALERT_DIALOG_TAG";
     public static String PROMPT_DIALOG_TAG_LOAD = "PROMPT_DIALOG_TAG_LOAD";
     public static String PROMPT_DIALOG_TAG_SAVE = "PROMPT_DIALOG_TAG_SAVE";
+    public static String PROMPT_DIALOG_TAG_LOAD_CLOUD ="PROMPT_DIALOG_TAG_LOAD_CLOUD";
 
     private static String TAG = MainActivity.class.getSimpleName();
 
@@ -188,22 +191,71 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
 
             SharedPreferences mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_SCORE_DB, Activity.MODE_PRIVATE);
             Map<String, ?> results = mySharedPreferences.getAll();
-
+            final Map<String, String> hMap = new HashMap<String, String>();
+             int total = 0;
              for (Map.Entry<String, ?> entry:results.entrySet()){
-                String keyResult = entry.getKey();
-                String valueResult = entry.getValue().toString();
-                String matchDate = keyResult.substring(0, 11);
-                String matchResult = valueResult.replaceAll(" vs ", ",");
-
-                matchResult = matchResult.replaceAll("\\s+", ",");
-                matchResult = matchResult.replace('+', ',');
-                for (int i = 0; i < DataSet.names.length; i++)
-                    matchResult = matchResult.replaceAll(DataSet.names[i], DataSet.descriptions[i]);
-
+                String key = entry.getKey();
+                String value = entry.getValue().toString();
+                String[] fields = value.split(DataSet.FIELD_SEPERATOR_COMMA);
+                int player1_position = Integer.parseInt(fields[0]);
+                int player2_position = Integer.parseInt(fields[1]);
+                int player3_position = Integer.parseInt(fields[2]);
+                int player4_position = Integer.parseInt(fields[3]);
+                String score = fields[4];
+                int player1 = DataSet.rowItems.get(player1_position).getId();
+                int player2 = DataSet.rowItems.get(player2_position).getId();
+                int player3 = DataSet.rowItems.get(player3_position).getId();
+                int player4 = DataSet.rowItems.get(player4_position).getId();
+                String result = key + DataSet.FIELD_SEPERATOR_COMMA + player1 + DataSet.FIELD_SEPERATOR_COMMA
+                        + player2 + DataSet.FIELD_SEPERATOR_COMMA + player3 + DataSet.FIELD_SEPERATOR_COMMA + player4 + DataSet.FIELD_SEPERATOR_COMMA + score;
+                total++;
+                hMap.put(String.valueOf(total), result);
+                Log.d("Record " + total, result);
             }
-
-
+            if (total > 0){
+                hMap.put("total", String.valueOf(total));
+                doUpLoad(hMap);
+            } else {
+                Toast.makeText(getApplicationContext(), "没有需要上传的数据", Toast.LENGTH_LONG).show();
+            }
         }
+    }
+
+    // Perform upload via volley
+    private void doUpLoad(Map<String, String> hMap) {
+        Request<JSONObject> jsonRequest = new CustomRequest(Request.Method.POST, DataSet.ACTION_UPLOAD_MATCH_RESULT, hMap,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.d(TAG, "response -> " + response.toString());
+                        try {
+                            boolean success = response.getBoolean("success");
+                            if (success){
+                                Toast.makeText(getApplicationContext(),"成功上传比赛数据",Toast.LENGTH_LONG).show();
+
+                                //clear shared preference
+                                SharedPreferences mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_SCORE_DB, Activity.MODE_PRIVATE);
+                                SharedPreferences.Editor editor = mySharedPreferences.edit();
+                                editor.clear();
+                                editor.apply();
+
+                         } else{
+                                Toast.makeText(getApplicationContext(),"上传失败",Toast.LENGTH_LONG).show();
+                            }
+
+                        } catch(JSONException e){
+                            e.printStackTrace();
+                            Toast.makeText(getApplicationContext(),"Error: " + e.getMessage(),Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e(TAG, error.getMessage(), error);
+            }
+        });
+
+        AppController.getInstance().addToRequestQueue(jsonRequest);
 
     }
 
@@ -258,12 +310,12 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
                                 String modified_date = person.getString("modified");
                                 String photo = person.getString("photo");
 
-                                jsonResponse +=  name + DataSet.FIELD_SEPERATOR;
-                                jsonResponse +=  alias + DataSet.FIELD_SEPERATOR;
-                                jsonResponse +=  age + DataSet.FIELD_SEPERATOR;
-                                jsonResponse +=  sex + DataSet.FIELD_SEPERATOR;
-                                jsonResponse +=  created_date + DataSet.FIELD_SEPERATOR;
-                                jsonResponse +=  modified_date + DataSet.FIELD_SEPERATOR;
+                                jsonResponse +=  name + DataSet.FIELD_SEPERATOR_DASH;
+                                jsonResponse +=  alias + DataSet.FIELD_SEPERATOR_DASH;
+                                jsonResponse +=  age + DataSet.FIELD_SEPERATOR_DASH;
+                                jsonResponse +=  sex + DataSet.FIELD_SEPERATOR_DASH;
+                                jsonResponse +=  created_date + DataSet.FIELD_SEPERATOR_DASH;
+                                jsonResponse +=  modified_date + DataSet.FIELD_SEPERATOR_DASH;
                                 jsonResponse +=  photo;
 
                                 editor.putString(id, jsonResponse);
@@ -335,9 +387,19 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
     }
 
     private void handleLoad() {
+        String promptMsg = "";
+
         FragmentTransaction pft = getFragmentManager().beginTransaction();
-        PromptDialogFragment pdf = PromptDialogFragment.newInstance("请输入历史数据文件名");
-        pdf.show(pft, PROMPT_DIALOG_TAG_LOAD);
+        if (DataSet.USING_CLOUD_DATA){
+            promptMsg = "请选择要载入数据的时间";
+            PromptDialogLoadDataFragment pdf = PromptDialogLoadDataFragment.newInstance(promptMsg);
+            pdf.show(pft, PROMPT_DIALOG_TAG_LOAD_CLOUD);
+        } else {
+            promptMsg = "请输入历史数据文件名";
+            PromptDialogFragment pdf = PromptDialogFragment.newInstance(promptMsg);
+            pdf.show(pft, PROMPT_DIALOG_TAG_LOAD);
+        }
+
     }
 
     private void saveData(String fname) {
@@ -378,7 +440,7 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
                 String match_data = "";
                 while((record = reader.readLine()) != null){
                     line++;
-                    String[] fields = record.split(",");
+                    String[] fields = record.split(DataSet.FIELD_SEPERATOR_COMMA);
                     if (fields.length != RECORD_FIELD_COUNT){
                         Log.v("LoadHistoryData", "Invalid record, ignored");
                     } else {
@@ -411,11 +473,13 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
     }
 
     private void showHistoryData(String matchResult) {
-        for (int i = 0; i < DataSet.names.length; i++)
-            matchResult = matchResult.replaceAll(DataSet.descriptions[i], DataSet.names[i]);
 
         TextView tv = (TextView)findViewById(R.id.textResult);
         tv.setText(matchResult);
+
+        //set content to be showed in textResult in right frame
+        PlayerSlot.setShowHistoryData(true);
+        PlayerSlot.setHistoryData(matchResult);
     }
 
     private void clearHistoryData() {
@@ -432,23 +496,29 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
      }
 
     private String getMatchResult() {
+
+        String record = "";
         SharedPreferences mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_SCORE_DB, Activity.MODE_PRIVATE);
         Map<String, ?> results = mySharedPreferences.getAll();
 
-        String record = "";
-        for (Map.Entry<String, ?> entry:results.entrySet()){
-            String keyResult = entry.getKey();
-            String valueResult = entry.getValue().toString();
-            String matchDate = keyResult.substring(0, 11);
-            String matchResult = valueResult.replaceAll(" vs ", ",");
-
-            matchResult = matchResult.replaceAll(" ", ",");
-            matchResult = matchResult.replace('+', ',');
-            for (int i = 0; i < DataSet.names.length; i++)
-                matchResult = matchResult.replaceAll(DataSet.names[i], DataSet.descriptions[i]);
-            record += keyResult.substring(0,11) + "," + matchResult + "\n";
+        for (Map.Entry<String, ?> entry:results.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue().toString();
+            String[] fields = value.split(DataSet.FIELD_SEPERATOR_COMMA);
+            int player1_position = Integer.parseInt(fields[0]);
+            int player2_position = Integer.parseInt(fields[1]);
+            int player3_position = Integer.parseInt(fields[2]);
+            int player4_position = Integer.parseInt(fields[3]);
+            String score = fields[4];
+            String player1 = DataSet.rowItems.get(player1_position).getAlias() + "-" + DataSet.rowItems.get(player1_position).getName();
+            String player2 = DataSet.rowItems.get(player2_position).getAlias() + "-" + DataSet.rowItems.get(player2_position).getName();
+            String player3 = DataSet.rowItems.get(player3_position).getAlias() + "-" + DataSet.rowItems.get(player3_position).getName();
+            String player4 = DataSet.rowItems.get(player4_position).getAlias() + "-" + DataSet.rowItems.get(player4_position).getName();
+            String matchDate = key.substring(0, 10);
+            record += matchDate + DataSet.FIELD_SEPERATOR_COMMA + player1 + DataSet.FIELD_SEPERATOR_COMMA + player2
+                    + DataSet.FIELD_SEPERATOR_COMMA + player3 + DataSet.FIELD_SEPERATOR_COMMA + player4 + DataSet.FIELD_SEPERATOR_COMMA + score;
+            record += "\n";
         }
-
         return record;
     }
 
@@ -485,6 +555,13 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
     public void handleAdd(){
         String toastMsg = "";
         String match = "";
+        String match_code = "";
+
+        // clear showHistoryData to make textResult will only show new added data
+        if (PlayerSlot.isShowHistoryData()){
+            PlayerSlot.setShowHistoryData(false);
+            PlayerSlot.setHistoryData("");
+        }
 
         Date date = new Date();
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -497,19 +574,27 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
            toastMsg += "缺少队员！";
            isValid = false;
          } else {
-            SparseArray<String> players = PlayerSlot.getSavedPlayer();
-            String player1 = players.get(R.id.textPalyer1);
-            String player2 = players.get(R.id.textPalyer2);
-            String player3 = players.get(R.id.textPalyer3);
-            String player4 = players.get(R.id.textPalyer4);
+            SparseArray<Integer> players = PlayerSlot.getSavedPlayer();
 
-            if ((player1 == player2) || (player1 == player3) || (player1 == player4)
-               || (player2 == player3) || (player2 == player4)
-               ||  (player3 == player4)){
+            int player1_position = players.get(R.id.textPalyer1);
+            int player2_position = players.get(R.id.textPalyer2);
+            int player3_position = players.get(R.id.textPalyer3);
+            int player4_position = players.get(R.id.textPalyer4);
+
+            String player1 = DataSet.rowItems.get(player1_position).getName();
+            String player2 = DataSet.rowItems.get(player2_position).getName();
+            String player3 = DataSet.rowItems.get(player3_position).getName();
+            String player4 = DataSet.rowItems.get(player4_position).getName();
+
+            if ((player1.compareTo(player2) == 0) || (player1.compareTo(player3) == 0) || (player1.compareTo(player4) == 0)
+               || (player2.compareTo(player3) == 0) || (player2.compareTo(player4) == 0)
+               ||  (player3.compareTo(player4) == 0)){
                 toastMsg += "队员选择重复！";
                 isValid = false;
             } else
                 match = player1 + "+" + player2 + " vs " + player3 + "+" + player4;
+                match_code = player1_position + DataSet.FIELD_SEPERATOR_COMMA + player2_position + DataSet.FIELD_SEPERATOR_COMMA
+                        + player3_position + DataSet.FIELD_SEPERATOR_COMMA + player4_position;
             }
 
             TextView tv = (TextView)findViewById(R.id.editText);
@@ -529,7 +614,7 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
                    // Save to sharedPreference "score.xml"
                SharedPreferences mySharedPreferences = getSharedPreferences(DataSet.PREFERENCE_SCORE_DB, Activity.MODE_PRIVATE);
                SharedPreferences.Editor editor = mySharedPreferences.edit();
-               editor.putString(timeKey, match + " " + score);
+               editor.putString(timeKey, match_code + DataSet.FIELD_SEPERATOR_COMMA + score);
                editor.apply();
 
                // Add new record to textResult view
@@ -617,6 +702,7 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
     public void onDialogDone(String tag, boolean cancelled, CharSequence message) {
         String s = tag + " responds with: " + message;
         String toastMsg = "";
+        boolean showMsg = true;
         switch (tag) {
             case "ALERT_DIALOG_TAG":
                 if(cancelled){
@@ -649,12 +735,139 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
                        saveData(message.toString());
                     }
                 }
+                break;
+            case "PROMPT_DIALOG_TAG_LOAD_CLOUD":
+                if (cancelled){
+                    toastMsg = "已取消操作";
+                } else{
+                    int id = Integer.parseInt(message.toString());
+                    String condition = "";
+                    showMsg = false;
+                    switch (id){
+                        case R.id.dayRBtn:
+                            condition = "1";
+                            break;
+                        case R.id.weekRBtn:
+                            condition = "2";
+                            break;
+                        case R.id.threeMmonthRBtn:
+                            condition = "3";
+                            break;
+                        case R.id.yearRBtn:
+                            condition = "4";
+                            break;
+                        default:
+                            break;
+                    }
+
+                  downloadData(DataSet.ACTION_DOWNLOAD_DATA_URL, condition);
+                }
+                break;
             default:
                 break;
         }
 
-        Toast toast = Toast.makeText(getApplicationContext(), toastMsg, Toast.LENGTH_SHORT);
-        toast.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0);
-        toast.show();
+        if (showMsg){
+            Toast toast = Toast.makeText(getApplicationContext(), toastMsg, Toast.LENGTH_SHORT);
+            toast.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0);
+            toast.show();
+        }
+
      }
+
+    // dowload history match result from cloud
+    private void downloadData(String url, String condition) {
+
+        Map<String, String> hMap = new HashMap<String, String>();
+        hMap.put("condition", condition);
+
+        Request<JSONObject> jsonRequest = new CustomRequest(Request.Method.POST, url, hMap,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.d(TAG, "response -> " + response.toString());
+                        TextView tv = (TextView)findViewById(R.id.textResult);
+                        tv.setText("");
+                        String downloadedResult = "";
+                        try {
+                            int total = response.getInt("total");
+
+                            if (total > 0){
+                                for (int i = 1; i <= total; i++){
+                                    String record = response.getString("record" + String.valueOf(i));
+                                    String[] details = record.split(DataSet.FIELD_SEPERATOR_COMMA);
+                                    String player1 = getDetail(details[0]);
+                                    String player2 = getDetail(details[1]);
+                                    String player3 = getDetail(details[2]);
+                                    String player4 = getDetail(details[3]);
+                                    String score = details[4];
+                                    String matchtime = details[5];
+                                    String output = matchtime.substring(0,10) + DataSet.FIELD_SEPERATOR_COMMA
+                                            + player1 + DataSet.FIELD_SEPERATOR_COMMA + player2 + DataSet.FIELD_SEPERATOR_COMMA + player3 + DataSet.FIELD_SEPERATOR_COMMA + player4
+                                            + DataSet.FIELD_SEPERATOR_COMMA + score;
+                                    output += "\n";
+                                    tv.append(output);
+                                    downloadedResult += output;
+                                }
+                                tv.append("\n共载入" + total + "条比赛记录.");
+
+                                //set content to be showed in textResult in right frame
+                                PlayerSlot.setShowHistoryData(true);
+                                PlayerSlot.setHistoryData(downloadedResult);
+
+                                //Save to file history.txt
+                                if (isExternalStorageWritable()){
+                                    String fname = "history.txt";
+                                    File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fname);
+                                    try {
+                                        if (!file.exists()) file.createNewFile();
+                                        FileOutputStream out = new FileOutputStream(file);
+                                        out.write(downloadedResult.getBytes("utf-8"));
+                                        out.close();
+                                        tv.append("已存入文件" + fname);
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+
+                            } else{
+                                Toast.makeText(getApplicationContext() ,"没有符合条件的比赛记录",Toast.LENGTH_LONG).show();
+                            }
+
+                        } catch(JSONException e){
+                            e.printStackTrace();
+                            Toast.makeText(getApplicationContext(),"Error: " + e.getMessage(),Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e(TAG, error.getMessage(), error);
+            }
+        });
+
+        AppController.getInstance().addToRequestQueue(jsonRequest);
+
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+
+
+        super.onSaveInstanceState(outState);
+    }
+
+    // get player's alias and name from shared preference
+    // return the format as 'alias-name'
+    private String getDetail(String id) {
+        SharedPreferences sp = getApplicationContext().getSharedPreferences(DataSet.PREFERENCE_TEAM_DB, getApplicationContext().MODE_PRIVATE);
+        String value = sp.getString(id, null);
+        if (value != null){
+            String[] fields = value.split(DataSet.FIELD_SEPERATOR_DASH);
+            value = fields[1] + '-' + fields[0];
+        } else {
+            value = "";
+        }
+        return value;
+    }
 }
