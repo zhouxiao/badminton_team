@@ -209,7 +209,7 @@ public class MainActivity extends ActionBarActivity  implements OnDialogDoneList
                 String result = key + DataSet.FIELD_SEPERATOR_COMMA + player1 + DataSet.FIELD_SEPERATOR_COMMA
                         + player2 + DataSet.FIELD_SEPERATOR_COMMA + player3 + DataSet.FIELD_SEPERATOR_COMMA + player4 + DataSet.FIELD_SEPERATOR_COMMA + score;
                 total++;
-                hMap.put(String.valueOf(total), result);
+                hMap.put("record" + String.valueOf(total), result);
                 Log.d("Record " + total, result);
             }
             if (total > 0){

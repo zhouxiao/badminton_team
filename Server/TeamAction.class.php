@@ -2,63 +2,51 @@
 // 本类由系统自动生成，仅供测试用途
 class TeamAction extends Action {
 	
-    public function index(){
-		$User = D('Team');
-		
-		$map['id'] = array('between', array('0', '8'));
-		$data = $User->where($map)->select();
-		
-	//	echo $data[0]['name'].' '.$data[0]['alias'].' '.$data[0]['age'].' '.$data[0]['sex'];	
-		$this->assign(data, $data);
-		
-	  $this->display();
-    }
-	
 	 // get all team member
    public function fetchall(){
 			$User = D('Team');
-			$data = $User->select();
+			$data = $User->field("id, name, alias, sex, age, created, modified, photo")->select();
 		
-			$this->ajaxReturn($data, "JSON");
+			echo json_encode($data);
 	 }
 		
 	// add new team member	 
 	 public function add(){
 		$User = D('Team');
-		$user['name'] = $this->_post('name');
-		$user['alias'] = $this->_post('alias');
-		$user['age'] = intval($this->_post('age'));
-		$user['sex'] = intval($this->_post('sex'));
-		$user['photo'] = $this->_post('photo');
+		$user['name'] = $_REQUEST['name'];
+		$user['alias'] = $_REQUEST['alias'];
+		$user['age'] = intval($_REQUEST['age']);
+		$user['sex'] = intval($_REQUEST['sex']);
+		$user['photo'] = $_REQUEST['photo'];
+		$user['created'] = date('Y-m-d H:i:s');
 		
-    		// Decode Image
+   		 // Decode Image
     		$binary=base64_decode($user['photo']);
    		$user['photo'] = $user['alias'].".png";
-		
-    		$file = fopen("Public\\img\\team\\".$user['photo'], 'wb');
+   	   		
+   		 $file = fopen("Public/img/team/".$user['photo'], 'wb');
     		// Create File
     		fwrite($file, $binary);
     		fclose($file);
 		
 		$result = $User->add($user);
+	
 		if ($result){
-			
 			$Record = M('Change');
-		  $data = $Record->where('id=1')->find();
-		  $toggle = $data['toggle'];
-		  if ($toggle == 0){
-			  $toggle = 1;
-		  } else {
-			  $toggle = 0;
-		  }
-						
+			  $data = $Record->where('id=1')->find();
+		  	$toggle = $data['toggle'];
+		  	if ($toggle == 0){
+				  $toggle = 1;
+		  	} else {
+				  $toggle = 0;
+		  	}
+		  				
 		 $Change = D('Change');
 		 $Change->toggle = $toggle;
 		 $Change->where('id=1')->save();
-		
 		 $last_updated = $Change->where('id=1')->getField('last_updated');
 			
-			echo json_encode(array('success'=>true, 'id'=>$result, 'last_updated'=>$last_updated));
+		echo json_encode(array('success'=>true, 'id'=>$result, 'last_updated'=>$last_updated));
 		} else {
 			echo json_encode(array('msg'=>'Some errors occured.'));
 		}
@@ -68,7 +56,7 @@ class TeamAction extends Action {
 	public function delete(){
 
 		$User = D('Team');
-		$map['id'] = intval($this->_post('id'));	
+		$map['id'] = intval($_REQUEST['id']);	
 		$result = $User->where($map)->delete();	
 		
 		if ($result){
@@ -96,26 +84,24 @@ class TeamAction extends Action {
 	// update team member
 	public function update(){
 		$User = D('Team');
-		$map['id'] = intval($this->_post('id'));
-		$user['name'] = $this->_post('name');
-		$user['alias'] = $this->_post('alias');
-		$user['age'] = intval($this->_post('age'));
-		$user['sex'] = intval($this->_post('sex'));
-			
-		$user['photo'] = $this->_post('photo');
+		$map['id'] = intval($_REQUEST['id']);	
+		$user['name'] = $_REQUEST['name'];
+		$user['alias'] = $_REQUEST['alias'];
+		$user['age'] = intval($_REQUEST['age']);
+		$user['sex'] = intval($_REQUEST['sex']);
+		$user['photo'] = $_REQUEST['photo'];
 		 // Decode Image
-    $binary=base64_decode($user['photo']);
-    $user['photo'] = $user['alias'].".png";
-				
-    $file = fopen("Public\\img\\team\\".$user['photo'], 'wb');
-    fwrite($file, $binary);
-    fclose($file);
-	
-		$result = $User->where($map)->save($user);
-		
-		if ($result !== false){
+   		 $binary=base64_decode($user['photo']);
+    		$user['photo'] = $user['alias'].".png";
 			
-			$Record = M('Change');
+		$file = fopen("Public/img/team/".$user['photo'], 'wb');
+    		// Create File
+    		fwrite($file, $binary);
+    		fclose($file);
+		
+		$result = $User->where($map)->save($user);
+		if ($result !== false){
+		  $Record = M('Change');
 		  $data = $Record->where('id=1')->find();
 		  $toggle = $data['toggle'];
 		  if ($toggle == 0){
@@ -148,12 +134,13 @@ class TeamAction extends Action {
 	
 	// Save match result 
 	public function upLoadMatchResult(){
-	
-			
+				
 		$Match = D('Match');
-		$total = intval($this->_post('total'));
+		$total = intval($_REQUEST['total']);
 		for ($i = 1; $i <= $total; $i++){
-			$record = $this->_post((string)$i);
+			$param = "record" . $i;
+			$record = $_REQUEST[$param];
+			$output .= $record;
 			$record = explode(",", $record);
 													
 			$records[] = array('matchtime'=>$record[0], 
@@ -163,26 +150,22 @@ class TeamAction extends Action {
 												'player4'=>intval($record[4]), 
 												'score'=>intval($record[5]));
 		}
-   
+      	
 		$result = $Match->addAll($records);
 		if ($result) {
 				echo json_encode(array('success'=>true, 'result'=>$result));		
 		} else {
 				echo json_encode(array('msg'=>'Some errors occured.'));
 		}
+	
 		
-		//$this->ajaxReturn($records, 'JSON');	
 	}
 
 	// get match result 	
 	public function downloadData(){
-		/*
-		$User = M('Team');
-		$users = $User->getField('id, alias, name');
-		*/
-		
+			
 		$Match = M('Match'); 
-		$condition = intval($this->_post('condition'));
+		$condition = intval($_REQUEST['condition']);
 		
 		switch ($condition){
 			case 1:
@@ -216,10 +199,17 @@ class TeamAction extends Action {
 														. $record['player3'] . ',' . $record['player4'] . ',' 
 														. $record['score'] . ',' . $record['matchtime'];
 		}
-			
 			echo json_encode($array);		
-		
 	}
 		
+	// fetch photostream from db	
+	public function fetchPhoto(){
+		$User = D('Team');
+		$map['id'] = intval($_REQUEST['id']);
+		$binary = $User->where($map)->getField('photobyte');
+		$stream = base64_encode($binary);
+		
+		echo json_encode(array('success'=>true, 'stream'=>$stream));
+	}
 
 }

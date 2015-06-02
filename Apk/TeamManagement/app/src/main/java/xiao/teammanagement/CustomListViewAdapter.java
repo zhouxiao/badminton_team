@@ -3,6 +3,7 @@ package xiao.teammanagement;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -77,11 +78,23 @@ public class CustomListViewAdapter extends ArrayAdapter<RowItem> {
                 String key = String.valueOf(rowItem.getId());
                 if (mySharedPreferences.contains(key)){   // Photo binary available in Shared Preference, get it locally
                     String encodedPhotoString = mySharedPreferences.getString(key, null);
-                    byte[] photoBinary = Base64.decode(encodedPhotoString, Base64.DEFAULT);
-                    Bitmap bitmap = BitmapFactory.decodeByteArray(photoBinary, 0, photoBinary.length);
-                    holder.imageView.setImageDrawable(new BitmapDrawable(bitmap));
-                    rowItem.setBitmap(bitmap);
+                        if (encodedPhotoString != null){
+                         byte[] photoBinary = Base64.decode(encodedPhotoString, Base64.DEFAULT);
+                         Bitmap bitmap = BitmapFactory.decodeByteArray(photoBinary, 0, photoBinary.length);
+                         holder.imageView.setImageDrawable(new BitmapDrawable(bitmap));
+                         rowItem.setBitmap(bitmap);
+                        } else {
+                            holder.imageView.setImageResource(android.R.drawable.ic_menu_rotate);
+                            BitmapDrawable bd = (BitmapDrawable)holder.imageView.getDrawable();
+                            Bitmap bitmap = bd.getBitmap();
+                            bitmap = ToolUtils.zoomImg(bitmap, 80, 80);
+                            rowItem.setBitmap(bitmap);
+
+                        }
                 } else{  // fetch it from remote server
+
+                   // NetworkUtil.fetchPhoto(AppController.getInstance().getRequestQueue(),holder.imageView, 80, 80, rowItem, context);
+
                     NetworkUtil.displayImage(                           // Using volley to fetch remote image
                             AppController.getInstance().getRequestQueue(),
                             holder.imageView,
@@ -91,6 +104,7 @@ public class CustomListViewAdapter extends ArrayAdapter<RowItem> {
                             rowItem,
                             context
                     );
+
                 }
                 break;
             default:

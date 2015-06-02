@@ -11,8 +11,11 @@ public class DataSet {
     public final static int USING_LOCAL_SQLITE_RESOURCE =  0x002;
     public final static int USING_REMOTE_SERVER_RESOURCE = 0x003;
 
-    public static String SERVER = "192.168.1.104";
-    public static String SITE_URL = "http://" + SERVER + "/Xiao/Team/";
+    public static String SERVER = "www.amituofo.cc";
+    //public static String SERVER = "192.168.1.104";  // for local debug
+
+    public static String SITE_URL = "http://" + SERVER + "/index.php/Team/";
+    //public static String SITE_URL = "http://" + SERVER + "/Xiao/Team/"; // for local debug
 
     public static String ACTION_FETCHALL_URL = SITE_URL + "fetchall";
     public static String ACTION_GET_LATEST_TIMESTAMP_URL = SITE_URL + "getLastUpdatedTimeStamp";
@@ -21,8 +24,9 @@ public class DataSet {
     public static String ACTION_DELETE_URL = SITE_URL + "delete";
     public static String ACTION_UPDATE_URL = SITE_URL + "update";
     public static String ACTION_DOWNLOAD_DATA_URL = SITE_URL + "downloadData";
+    public static String ACTION_FETCH_PHOTO_URL = SITE_URL + "fetchPhoto";
 
-    public static String SERVER_IMAGE_PATH = "http://" + SERVER + "/Xiao/Public/img/team/";
+    public static String SERVER_IMAGE_PATH = "http://" + SERVER + "/Public/img/team/";
     public static String FIELD_SEPERATOR_DASH = "--";
     public static String FIELD_SEPERATOR_COMMA = ",";
 
