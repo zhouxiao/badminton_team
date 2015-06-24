@@ -135,7 +135,7 @@ class TeamAction extends Action {
 	// Save match result 
 	public function upLoadMatchResult(){
 				
-		$Match = D('Match');
+		$Match = D('Score');
 		$total = intval($_REQUEST['total']);
 		for ($i = 1; $i <= $total; $i++){
 			$param = "record" . $i;
@@ -164,7 +164,7 @@ class TeamAction extends Action {
 	// get match result 	
 	public function downloadData(){
 			
-		$Match = M('Match'); 
+		$Match = M('Score'); 
 		$condition = intval($_REQUEST['condition']);
 		
 		switch ($condition){
